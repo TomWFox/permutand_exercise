@@ -29,7 +29,6 @@ pd.set_option('mode.copy_on_write', True)
 _mosquitoes = pd.read_csv('data/mosquito_beer.csv')
 EG_DF = _mosquitoes[_mosquitoes['test'] == 'after']
 
-
 def permutation_test(data,
                      group_col_name,
                      value_col_name,
@@ -37,6 +36,24 @@ def permutation_test(data,
                      alternative='greater',
                      n_iters=10_000):
     # Your code here.
+    means = data.loc[:,value_col_name].groupby(data.loc[:, group_col_name]).agg(summary_func)
+    actual_diff = np.diff(means)[0]
+
+    n_subjects = len(data.loc[:, group_col_name])
+
+    fake_diffs = np.zeros(n_iters)
+
+    for i in range(n_iters):
+        shuffled = rng.permuted(data.loc[:, group_col_name])
+        fake_means = data.loc[:, value_col_name].groupby(shuffled).agg(summary_func)
+        fake_diffs[i] = np.diff(fake_means)[0]
+
+    n_alt = 0
+    if alternative == 'greater':
+        n_alt = np.count_nonzero(fake_diffs <= actual_diff)
+    elif alternative == 'less':
+        n_alt = np.count_nonzero(fake_diffs >= actual_diff)
+
     return actual_diff, fake_diffs, n_alt / n_iters
 
 
